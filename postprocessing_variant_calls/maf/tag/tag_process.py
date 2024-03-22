@@ -20,6 +20,7 @@ from postprocessing_variant_calls.maf.helper import (
     check_separator,
     read_tsv,
     MAFFile,
+    RulesFile,
     gen_id_tsv,
 )
 from utils.pybed_intersect import annotater
@@ -266,6 +267,116 @@ def traceback(
     typer.secho(f"Writing Delimited file: {output_maf}", fg=typer.colors.BRIGHT_GREEN)
     mafa.to_csv(f"{output_maf}".format(outputFile=output_maf), index=False, sep="\t")
     return 0
+
+
+@app.command(
+    "by_rules",
+    help="Tag a variant in a MAF file based on criterion provided by input rules JSON file",
+)
+def by_maf(
+    maf: Path = typer.Option(
+        ...,
+        "--maf",
+        "-m",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        writable=False,
+        readable=True,
+        resolve_path=True,
+        help="MAF file to tag",
+    ),
+    rules: Path = typer.Option(
+        ...,
+        "--rules",
+        "-r",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        writable=False,
+        readable=True,
+        resolve_path=True,
+        help="Intervals JSON file containing criterion to tag input MAF by",
+    ),
+    output_maf: Path = typer.Option(
+        "output.maf", "--output", "-o", help="Maf output file name."
+    ),
+    separator: str = typer.Option(
+        "tsv",
+        "--separator",
+        "-sep",
+        help="Specify a separator for delimited data.",
+        callback=check_separator,
+    ),
+):
+    # prep maf
+    mafa = MAFFile(maf, separator)
+    typer.secho(
+        f"Tagging Maf with criteria from input rules JSON file",
+        fg=typer.colors.BRIGHT_GREEN,
+    )
+    rules_file = RulesFile(rules)
+    tagged_by_rules_maf = mafa.tag_by_rules(rules_file.data_frame)
+
+    typer.secho(f"Writing Delimited file: {output_maf}", fg=typer.colors.BRIGHT_GREEN)
+    tagged_by_rules_maf.to_csv(
+        f"{output_maf}".format(outputFile=output_maf), index=False, sep="\t"
+    )
+    return 0
+
+
+@app.command(
+    "by_access",
+    help="Tag a variant in a MAF file based on criterion stated by the SNV/indels ACCESS pipeline workflow",
+)
+def by_access(
+    maf: Path = typer.Option(
+        ...,
+        "--maf",
+        "-m",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        writable=False,
+        readable=True,
+        resolve_path=True,
+        help="MAF file to tag",
+    ),
+    rules: Path = typer.Option(
+        ...,
+        "--rules",
+        "-r",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        writable=False,
+        readable=True,
+        resolve_path=True,
+        help="Intervals JSON file containing criterion to tag input MAF by",
+    ),
+    output_maf: Path = typer.Option(
+        "output.maf", "--output", "-o", help="Maf output file name."
+    ),
+    separator: str = typer.Option(
+        "tsv",
+        "--separator",
+        "-sep",
+        help="Specify a separator for delimited data.",
+        callback=check_separator,
+    ),
+):
+    # run tag by_rules
+    mafa = MAFFile(maf, separator)
+    typer.secho(
+        f"Tagging Maf with criteria from input rules JSON file",
+        fg=typer.colors.BRIGHT_GREEN,
+    )
+    rules_file = RulesFile(rules)
+    tagged_by_rules_maf = mafa.tag_by_rules(rules_file.data_frame)
+
+    # run tag_by_hotspots
+
+    # typer.secho(f"Writing Delimited file: {output_maf}", fg=typer.colors.BRIGHT_GREEN)
 
 
 if __name__ == "__main__":

@@ -307,7 +307,6 @@ class MAFFile:
             if tagging == "traceback":
                 self.tag_traceback(cols, tagging)
 
-
         else:
             typer.secho(
                 f"missing columns expected for {tagging} tagging expects: {set(cols).difference(set(self.data_frame.columns.tolist()))}, which was missing from the input",
@@ -323,38 +322,24 @@ class MAFFile:
             self.tag("prevalence_in_cosmicDB")
             self.tag("truncating_mut_in_TSG")
         return self.data_frame
-    
+
     def tag_traceback(self, cols, tagging):
         if set(cols["standard"] + cols["access"]).issubset(
-                set(self.data_frame.columns.tolist())
-            ):
-                self.data_frame["t_ref_count"] = self.data_frame[
-                    "t_ref_count_standard"
-                ].combine_first(
-                    self.data_frame["t_ref_count_fragment_simplex_duplex"]
-                )
-                self.data_frame["t_alt_count"] = self.data_frame[
-                    "t_alt_count_standard"
-                ].combine_first(
-                    self.data_frame["t_alt_count_fragment_simplex_duplex"]
-                )
-                self.data_frame["t_total_count"] = self.data_frame[
-                    "t_total_count_standard"
-                ].combine_first(
-                    self.data_frame["t_total_count_fragment_simplex_duplex"]
-                )
-        elif set(cols["standard"]).issubset(
             set(self.data_frame.columns.tolist())
         ):
             self.data_frame["t_ref_count"] = self.data_frame[
                 "t_ref_count_standard"
-            ]
+            ].combine_first(self.data_frame["t_ref_count_fragment_simplex_duplex"])
             self.data_frame["t_alt_count"] = self.data_frame[
                 "t_alt_count_standard"
-            ]
+            ].combine_first(self.data_frame["t_alt_count_fragment_simplex_duplex"])
             self.data_frame["t_total_count"] = self.data_frame[
                 "t_total_count_standard"
-            ]
+            ].combine_first(self.data_frame["t_total_count_fragment_simplex_duplex"])
+        elif set(cols["standard"]).issubset(set(self.data_frame.columns.tolist())):
+            self.data_frame["t_ref_count"] = self.data_frame["t_ref_count_standard"]
+            self.data_frame["t_alt_count"] = self.data_frame["t_alt_count_standard"]
+            self.data_frame["t_total_count"] = self.data_frame["t_total_count_standard"]
         elif set(cols["access"]).issubset(set(self.data_frame.columns.tolist())):
             self.data_frame["t_ref_count"] = self.data_frame[
                 "t_ref_count_fragment_simplex_duplex"
@@ -371,6 +356,53 @@ class MAFFile:
                 fg=typer.colors.RED,
             )
             raise typer.Abort()
+
+    def tag_by_rules(self, rules_df):
+        if rules_df is not None:
+            for index, row in rules_df.iterrows():
+                condition = True
+                is_list = lambda var: isinstance(var, list)
+
+                (
+                    Tag_Column_Name,
+                    Hugo_Symbol,
+                    Variant_Classification,
+                    Start_Position,
+                    End_Position,
+                ) = row[
+                    [
+                        "Tag_Column_Name",
+                        "Hugo_Symbol",
+                        "Variant_Classification",
+                        "Start_Position",
+                        "End_Position",
+                    ]
+                ]
+
+                if Hugo_Symbol != "none":
+                    condition &= self.data_frame["Hugo_Symbol"].isin(Hugo_Symbol)
+                if Variant_Classification != "none":
+                    condition &= self.data_frame["Variant_Classification"].isin(
+                        Variant_Classification
+                    )
+                if Start_Position != "none":
+                    condition &= self.data_frame["Start_Position"] >= float(
+                        Start_Position
+                    )
+                if End_Position != "none":
+                    condition &= self.data_frame["End_Position"] <= float(End_Position)
+
+                colname = " ".join(Tag_Column_Name)
+                tag_column_name = f"is_{colname}_variant"
+                self.data_frame[tag_column_name] = "No"
+                self.data_frame.loc[condition, tag_column_name] = "Yes"
+        else:
+            typer.secho(
+                f"MAF File is empty. Please check your inputs again.",
+                fg=typer.colors.RED,
+            )
+            raise typer.Abort()
+        return self.data_frame
 
     def filter(self, filter):
         cols = self.cols[filter]
@@ -461,6 +493,25 @@ class MAFFile:
             missing = list(req_columns_set - set(header))
             typer.secho(
                 f"Header file is missing the following required column names: {missing}",
+                fg=typer.colors.RED,
+            )
+            raise typer.Abort()
+
+
+class RulesFile:
+    def __init__(self, file_path):
+        self.file_path = file_path
+        self.data_frame = self.__read_json_to_dataframe()
+
+    def __read_json_to_dataframe(self):
+        try:
+            data_frame = pd.read_json(self.file_path)
+            data_frame.replace("", "none", inplace=True)
+
+            return data_frame
+        except Exception as e:
+            typer.secho(
+                f"Error reading input Rules File: {e}. Please check that your input file is in standard JSON form.",
                 fg=typer.colors.RED,
             )
             raise typer.Abort()
