@@ -2,6 +2,8 @@
 # imports
 from __future__ import division
 import os
+import functools
+import re
 import sys
 import vcf
 import time
@@ -239,6 +241,64 @@ def cmo_ch(
     mafa = MAFFile(maf, separator)
     mafa = mafa.filter("cmo_ch_filter")
     mafa.to_csv(f"{output_maf}".format(outputFile=output_maf), index=False, sep="\t")
+    return 0
+
+
+@app.command(
+    "access_remove_variants",
+    help="Filter a MAF file based on all the parameters satisfied by the remove variants by annotations CWL script in the ACCESS pipeline",
+)
+def access_remove_variants(
+    maf: Path = typer.Option(
+        ...,
+        "--maf",
+        "-m",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        writable=False,
+        readable=True,
+        resolve_path=True,
+        help="MAF file to subset",
+    ),
+    intervals_file: Path = typer.Option(
+        ...,
+        "--intervals",
+        "-i",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        writable=False,
+        readable=True,
+        resolve_path=True,
+        help="Intervals file containing rows of criterion to tag input MAF by",
+    ),
+    output_maf: Path = typer.Option(
+        "output.maf", "--output", "-o", help="Maf output file name."
+    ),
+    separator: str = typer.Option(
+        "tsv",
+        "--separator",
+        "-sep",
+        help="Specify a seperator for delimited data.",
+        callback=check_separator,
+    ),
+):
+    # prep maf
+    mafa = MAFFile(maf, separator)
+    maf_df = mafa.tag_variant_by_intervals(intervals_file)
+
+    variant_col_pattern = re.compile(r"^is_.*_variant$")
+    variant_columns = [col for col in maf_df.columns if variant_col_pattern.match(col)]
+    query_string = " | ".join([f"{column} == 'Yes'" for column in variant_columns])
+    subset_df = maf_df.query(query_string)
+
+    final_maf_df = subset_df.drop(columns=variant_columns)
+
+    final_maf_df.to_csv(
+        f"{output_maf}".format(outputFile=output_maf), index=False, sep="\t"
+    )
+
     return 0
 
 
