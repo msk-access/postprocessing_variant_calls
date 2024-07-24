@@ -1,0 +1,29 @@
+
+
+    [
+    {
+        "tag_column_name": "exonic",
+        "Hugo_Symbol": "",
+        "Variant_Classification": ["Missense_Mutation","Nonsense_Mutation","Splice_Site","Frame_Shift_Ins","Frame_Shift_Del","In_Frame_Ins","In_Frame_Del","Translation_Start_Site","Nonstop_Mutation","Silent"],
+        "Start_Position":"",
+        "End_Position": ""
+    }
+    ,
+    {
+        "tag_column_name": "MET",
+        "Hugo_Symbol":"MET",
+        "Variant_Classification": ["Splice_Region","Intron"],
+        "Start_Position":11611803,
+        "End_Position":116412143
+    }
+    ,
+    {
+        "tag_column_name": "TERT",
+        "Hugo_Symbol":"TERT",
+        "Variant_Classification": "5'Flank",
+        "Start_Position":"",
+        "End_Position":""
+    }
+    ]
+
+

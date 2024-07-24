@@ -357,6 +357,53 @@ class MAFFile:
             )
             raise typer.Abort()
 
+    def tag_by_variant_annotations(self, rules_df):
+        if rules_df is not None:
+            for index, row in rules_df.iterrows():
+                condition = True
+                is_list = lambda var: isinstance(var, list)
+
+                (
+                    Tag_Column_Name,
+                    Hugo_Symbol,
+                    Variant_Classification,
+                    Start_Position,
+                    End_Position,
+                ) = row[
+                    [
+                        "Tag_Column_Name",
+                        "Hugo_Symbol",
+                        "Variant_Classification",
+                        "Start_Position",
+                        "End_Position",
+                    ]
+                ]
+
+                if Hugo_Symbol != "none":
+                    condition &= self.data_frame["Hugo_Symbol"].isin(Hugo_Symbol)
+                if Variant_Classification != "none":
+                    condition &= self.data_frame["Variant_Classification"].isin(
+                        Variant_Classification
+                    )
+                if Start_Position != "none":
+                    condition &= self.data_frame["Start_Position"] >= float(
+                        Start_Position
+                    )
+                if End_Position != "none":
+                    condition &= self.data_frame["End_Position"] <= float(End_Position)
+
+                colname = " ".join(Tag_Column_Name)
+                tag_column_name = f"is_{colname}_variant"
+                self.data_frame[tag_column_name] = "No"
+                self.data_frame.loc[condition, tag_column_name] = "Yes"
+        else:
+            typer.secho(
+                f"MAF File is empty. Please check your inputs again.",
+                fg=typer.colors.RED,
+            )
+            raise typer.Abort()
+        return self.data_frame
+
     def filter(self, filter):
         cols = self.cols[filter]
         if set(cols).issubset(set(self.data_frame.columns.tolist())):
@@ -432,9 +479,25 @@ class MAFFile:
         return self.data_frame
 
     def __process_header(self, header):
+        possible_delimiters = [",", "\t", " "]
+
+        with open(header, "r") as file:
+            first_line = file.read().rstrip("\n")
+            delimiter = None
+            try:
+                for delim in possible_delimiters:
+                    if delim in first_line:
+                        delimiter = delim
+                        break
+                if delim is None:
+                    raise ValueError(
+                        "No delimiter found in the header file. Please ensure your header file is either in CSV or TSV format."
+                    )
+            except ValueError as e:
+                raise
+
         file = open(header, "r")
-        header = file.readline().rstrip("\n").split(",")
-        file.close
+        header = file.readline().rstrip("\n").split(delimiter)
         header = self.__check_headers(header)
         return header
 
@@ -446,6 +509,25 @@ class MAFFile:
             missing = list(req_columns_set - set(header))
             typer.secho(
                 f"Header file is missing the following required column names: {missing}",
+                fg=typer.colors.RED,
+            )
+            raise typer.Abort()
+
+
+class RulesFile:
+    def __init__(self, file_path):
+        self.file_path = file_path
+        self.data_frame = self.__read_json_to_dataframe()
+
+    def __read_json_to_dataframe(self):
+        try:
+            data_frame = pd.read_json(self.file_path)
+            data_frame.replace("", "none", inplace=True)
+
+            return data_frame
+        except Exception as e:
+            typer.secho(
+                f"Error reading input Rules File: {e}. Please check that your input file is in standard JSON form.",
                 fg=typer.colors.RED,
             )
             raise typer.Abort()

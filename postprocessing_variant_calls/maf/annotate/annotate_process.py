@@ -161,6 +161,12 @@ def maf_tsv(
 
     # annotate maf with processed bed file
     annotated_maf = mafa.annotate_maf_maf(tsva, oc, values)
+    # added line of code to remove ID column
+    annotated_maf = annotated_maf.drop("id", axis=1)
+    annotated_maf["Start_Position"] = annotated_maf["Start_Position"].astype(int)
+    annotated_maf["End_Position"] = annotated_maf["End_Position"].astype(int)
+    # added line of code to convert start/end coordinates from float to integer
+
     # write out paths
     annotated_maf.to_csv(output_maf, index=False, sep="\t")
     return 0
