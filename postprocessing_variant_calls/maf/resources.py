@@ -276,3 +276,19 @@ tsg_genes = [
     "CALR",
     "FLT3",
 ]
+
+keep_exonic = [
+    "Missense_Mutation",
+    "Nonsense_Mutation",
+    "Splice_Site",
+    "Frame_Shift_Ins",
+    "Frame_Shift_Del",
+    "In_Frame_Ins",
+    "In_Frame_Del",
+    "Translation_Start_Site",
+    "Nonstop_Mutation",
+    "Silent",
+]
+
+met_start_end_range_position1 = 116411903
+met_start_end_range_position2 = 116412043

@@ -1,0 +1,3 @@
+changes being made to annotation process functions
+
+1. mafbytsv calls "split_by_annotation" function if the flag is invoked (split_by_annotation is located in pv maf tag for now)

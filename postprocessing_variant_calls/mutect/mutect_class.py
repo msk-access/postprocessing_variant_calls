@@ -176,7 +176,7 @@ class mutect_sample:
 
         # Filter each row (Mutation)
         txtDF = pd.read_table(self.inputTxt, skiprows=1, dtype=str)
-        txt_fh = open(f"{self.outputDir}/{self.txt_out}", "wb")
+        txt_fh = open(f"{self.txt_out}", "wb")
         for index, row in txtDF.iterrows():
             chr = row.loc["contig"]
             pos = row.loc["position"]
@@ -336,9 +336,10 @@ def _write_to_vcf(outDir, vcf_out, vcf_reader, allsamples, tsampleName, keepDict
             record.add_info("set", "MuTect")
 
             # If the caller reported the normal genotype column before the tumor, swap those around
+
             if allsamples[1] == tsampleName:
-                vcf_reader.samples[0] = allsamples[1]
-                vcf_reader.samples[1] = allsamples[0]
+                vcf_writer.samples[0] = allsamples[1]
+                vcf_writer.samples[1] = allsamples[0]
 
             if record.FILTER == "PASS":
                 vcf_writer.write_record(record)
